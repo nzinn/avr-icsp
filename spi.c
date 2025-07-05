@@ -11,10 +11,10 @@
 void SPI_MasterInit() {
 
   /* Set output and clock pin to output */
-DDRB = (1 << DD_MOSI) | (1<<DD_SCK) | (1<<DD_SS);
+DDRB |= (1 << DD_MOSI) | (1<<DD_SCK) | (1<<DD_SS);
 
-  /* Enable SPI, set mode to master and clock to fck/16 */
-  SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
+  /* Enable SPI, set mode to master and clock to fc/k64 */
+ SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR1)|(1<<SPR0);
 }
 
 void SPI_MasterTX(char data) {
@@ -34,6 +34,9 @@ void SPI_MasterTXString(char* string) {
 
 /* Returns recieved value from master */
 uint8_t SPI_MasterRX() {
+  while(!(SPSR & (1<<SPIF)))
+    ;
+  
   return SPDR;
 }
 

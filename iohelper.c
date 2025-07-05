@@ -1,34 +1,48 @@
 #include "iohelper.h"
 #include <avr/io.h>
 #include <avr/sfr_defs.h>
+#include <stdint.h>
 
-void setPinMode(int pinNumber, enum pinMode level) {
-  switch (pinNumber) {
-  case 0:
-    DDRD |= level<<DDD0;
-    break;
-  case 1:
-    DDRD |= level<<DDD1;
-    break;
-  case 2:
-    DDRD |= level<<DDD2;
-    break;
-  case 3:
-    DDRD |= level<<DDD3;
-    break;
-  case 4:
-    DDRD |= level<<DDD4;
-    break;
-  case 5:
-    DDRD |= level<<DDD5;
-    break;
-  case 6:
-    DDRD |= level<<DDD6;
-    break;
-  case 7:
-    DDRD |= level<<DDD7;
-    break;
+
+void setPinDirection(uint8_t pinNumber, enum Direction direction) {
+  uint8_t value = 1;
+  if (pinNumber < 7) {
+    value <<= pinNumber;
+
+    if (direction == OUTPUT) {
+      DDRD |= value;
+    } else {
+      DDRD &= ~value;
+    }
+  } else if (pinNumber < 14) {
+    if (direction == OUTPUT) {
+      DDRB |= value;
+    } else {
+      DDRB &= ~value;
+    }
+  }
+  
+}
+
+void digWrite(uint8_t pinNumber, enum Level level) {
+  uint8_t value = 1;
+  if (pinNumber < 7) {
+    value <<= pinNumber;
+
+    if (level == HIGH) {
+      PORTD |= value;
+    } else {
+      PORTD &= ~value;
+    }
+  } else if (pinNumber < 14){
+    value <<= pinNumber - 8;
+    if (level == HIGH) {
+      PORTB |= value;
+    } else {
+      PORTB &= ~value;
+    }
   }
 }
+
 
 

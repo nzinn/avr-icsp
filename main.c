@@ -19,6 +19,10 @@ void SPI_LoadProg(uint16_t addr, uint16_t data);
 
 void SPI_WriteProg(uint16_t addr);
 
+char SPI_ReadLow(uint16_t addr);
+
+
+
 #define BAUD_RATE 103
 
 int main() {
@@ -26,28 +30,23 @@ int main() {
   SPI_MasterInit();
 
   /* Pull reset pin low */
-  pinMode(RESET, OUTPUT);
+  setPinDirection(RESET, OUTPUT);
   digWrite(RESET, LOW);
-
   /* Wait before prog enable */
   _delay_ms(20);
 
-  /* Keep tring to enable programming mode, waiting 20ms in between retries */
-  while (!SPI_ProgEnable()) {
 
-    /* Reset positive pulse */
+  while(!SPI_ProgEnable()) {
     digWrite(RESET, HIGH);
     _delay_us(8);
     digWrite(RESET, LOW);
-
     _delay_ms(20);
   }
 
-  for(;;){}
   
 }
 
-/* Enables programming mode on chip */
+/* Enables programming mode on chip, returns true on success, false on error */
 uint8_t SPI_ProgEnable() {
   SPI_MasterTX(0xAC);
   SPI_MasterTX(0x53);
@@ -116,4 +115,13 @@ void SPI_WritePage(uint16_t address) {
     _delay_ms(1);
   }
   
+}
+
+char SPI_ReadLow(uint16_t address) {
+  SPI_MasterTX(0x20);
+  SPI_MasterTX(address>>8);
+  SPI_MasterTX((uint8_t) address);
+  SPI_MasterTX(0x0);
+
+  return SPI_MasterRX();
 }

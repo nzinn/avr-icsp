@@ -2,33 +2,13 @@
 #define IO_HELPER_H
 
 #include <avr/io.h>
+#include <stdint.h>
 
-#define INPUT 0
-#define OUTPUT 1
+enum Direction{INPUT, OUTPUT};
+enum Level{LOW, HIGH};
 
-#define LOW 0
-#define HIGH 1
+void setPinDirection(uint8_t pinNumber, enum Direction direction);
+void digWrite(uint8_t pinNumber, enum Level level);
 
-#define pinMode(pinNumber, direction)                                          \
-  do {                                                                         \
-    if (pinNumber < 8) {                                                       \
-      DDRD |= direction << pinNumber;                                          \
-    } else if (pinNumber < 13) {                                               \
-      DDRB |= direction << (pinNumber - 8);                                    \
-    }                                                                          \
-  } while (0)								\
-
-#define digWrite(pinNumber, level)                                             \
-  do {                                                                         \
-    if (pinNumber < 8) {                                                       \
-      if (DDRD >> pinNumber & 1) {                                             \
-        PORTD |= level << pinNumber;                                           \
-      }                                                                        \
-    } else if (pinNumber < 13) {                                               \
-      if (DDRB >> (pinNumber - 8) & 1) {					\
-        PORTB |= level << (pinNumber - 8);                                     \
-      }                                                                        \
-    }                                                                          \
-  } while (0)								\
-
+void digRead(int pinNumber);
 #endif
