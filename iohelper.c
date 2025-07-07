@@ -3,18 +3,18 @@
 #include <avr/sfr_defs.h>
 #include <stdint.h>
 
-
-void setPinDirection(uint8_t pinNumber, enum Direction direction) {
+/* Sets an input to be low or high, using arduino pin number conventions */
+void set_pin_dir(uint8_t pin_num, enum Direction direction) {
   uint8_t value = 1;
-  if (pinNumber < 7) {
-    value <<= pinNumber;
+  if (pin_num < 7) {
+    value <<= pin_num;
 
     if (direction == OUTPUT) {
       DDRD |= value;
     } else {
       DDRD &= ~value;
     }
-  } else if (pinNumber < 14) {
+  } else if (pin_num < 14) {
     if (direction == OUTPUT) {
       DDRB |= value;
     } else {
@@ -24,18 +24,20 @@ void setPinDirection(uint8_t pinNumber, enum Direction direction) {
   
 }
 
-void digWrite(uint8_t pinNumber, enum Level level) {
+
+/* Writes level to the pin number */
+void dig_write(uint8_t pin_num, enum Level level) {
   uint8_t value = 1;
-  if (pinNumber < 7) {
-    value <<= pinNumber;
+  if (pin_num < 7) {
+    value <<= pin_num;
 
     if (level == HIGH) {
       PORTD |= value;
     } else {
       PORTD &= ~value;
     }
-  } else if (pinNumber < 14){
-    value <<= pinNumber - 8;
+  } else if (pin_num < 14){
+    value <<= pin_num - 8;
     if (level == HIGH) {
       PORTB |= value;
     } else {

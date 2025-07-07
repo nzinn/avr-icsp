@@ -4,9 +4,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
-void usartInit(uint16_t ubrr) {
+void USART_init(uint16_t ubrr) {
 
-#define USART_INIT
   /* Set baud rate */
 
   UBRR0H = (uint8_t)(ubrr >> 8);
@@ -18,11 +17,7 @@ void usartInit(uint16_t ubrr) {
 }
 
 /* Transmits a character over usart */
-void putChar(char c) {
-
-#ifndef USART_INIT
-#error Usart not initialized! Use usartInit()!
-#endif
+void USART_tx(char c) {
 
   /* Wait for data register to be empty */
   while (!(UCSR0A >> UDRE0 & 1)) {
@@ -31,17 +26,21 @@ void putChar(char c) {
   UDR0 = c;
 }
 
+/* Recieve a character over usart */
+unsigned char USART_rx() {
+  /* Wait for data */
+  while (!(UCSR0A & (1 << RXC0)))
+    ;
+
+  return UDR0;
+} 
 
 /* Print a string over usart */
-void print(char *s) {
+void USART_tx_string(char *s) {
 
   for (int i = 0; s[i] != '\0'; i++) {
-    putChar(s[i]);
+    USART_tx(s[i]);
   }
   
 }
 
-void println(char *s) {
-  print(s);
-  print("\r\n");
-}

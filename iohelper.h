@@ -7,8 +7,8 @@
 enum Direction{INPUT, OUTPUT};
 enum Level{LOW, HIGH};
 
-void setPinDirection(uint8_t pinNumber, enum Direction direction);
-void digWrite(uint8_t pinNumber, enum Level level);
+void set_pin_dir(uint8_t pin_num, enum Direction direction);
+void dig_write(uint8_t pin_num, enum Level level);
 
-void digRead(int pinNumber);
+void dig_read(int pin_num);
 #endif

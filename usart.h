@@ -2,10 +2,8 @@
 #define USART_H
 
 #include <stdint.h>
-void usartInit(uint16_t baudRate);
-void putChar(char c);
-void print(char *s);
-void println(char *s);
-
-
+void USART_init(uint16_t baudRate);
+void USART_tx(char c);
+unsigned char USART_rx();
+void USART_tx_string(char *s);
 #endif 

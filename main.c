@@ -2,126 +2,178 @@
 #include <avr/sfr_defs.h>
 #include <stdint.h>
 
-#define F_CPU 16000000UL
 #include <util/delay.h>
 
 #include "iohelper.h"
 #include "spi.h"
+#include "instructions.h"
+#include "packet.h"
+#include "usart.h"
+
 
 #define RESET 2
 
-/* enables programming mode, returns 1 on success and zero on failure */
-uint8_t SPI_ProgEnable();
+#define USART_UBRR_VAL 77
 
-void SPI_ChipErase();
-
-void SPI_LoadProg(uint16_t addr, uint16_t data);
-
-void SPI_WriteProg(uint16_t addr);
-
-char SPI_ReadLow(uint16_t addr);
+#define MAX_PROG_ENABLE_TRIES 5
 
 
 
-#define BAUD_RATE 103
+typedef void (*state_func_t)();
+
+
+
+/* Init functino */
+void state_init();
+
+
+/* Waits for a packet, writes it to memory and decodes it */
+void state_recieve_packet();
+
+/* Sends the contents of the packet buffer through UART */
+void state_send_packet();
+
+
+/* Writes and reads the packet to program memory */
+void state_write_flash();
+void state_read_flash();
+
+/* Writes and reads packet to EEPROM */
+void state_write_EEPROM();
+void state_read_EEPROM();
+
+/* Sets and reads FUSE bits */
+void state_write_FUSE();
+void state_read_FUSE();
+
+/* Erases program and EEPROM memory */
+void state_erase_chip();
+
+/* Enables the programming of the MCU */
+void state_enable_programming();
+
+
+state_func_t current_state = state_init;
+unsigned char packet_buffer[PACKET_SIZE];
+
 
 int main() {
+  while (1) {
+    current_state();
+  }
+}
 
-  SPI_MasterInit();
+void state_init() {
+  /* Initialize usart and SPI and await for packets */
+  SPI_master_init();
+  USART_init(USART_UBRR_VAL);
+
+  current_state = state_recieve_packet;
+}
+
+void state_enable_programming() {
 
   /* Pull reset pin low */
-  setPinDirection(RESET, OUTPUT);
-  digWrite(RESET, LOW);
-  /* Wait before prog enable */
+  set_pin_dir(RESET, OUTPUT);
+  dig_write(RESET, LOW);
+  /* Wait before sending prog enable command */
   _delay_ms(20);
 
 
-  while(!SPI_ProgEnable()) {
-    digWrite(RESET, HIGH);
+  int tries = 0;
+  /* Send prog enable command and, if failed, send a positive pulse on the reset line*/
+  while(!SPI_prog_enable() && tries < MAX_PROG_ENABLE_TRIES) {
+    dig_write(RESET, HIGH);
     _delay_us(8);
-    digWrite(RESET, LOW);
+    dig_write(RESET, LOW);
     _delay_ms(20);
+    tries++;
   }
 
-  
-}
 
-/* Enables programming mode on chip, returns true on success, false on error */
-uint8_t SPI_ProgEnable() {
-  SPI_MasterTX(0xAC);
-  SPI_MasterTX(0x53);
-  SPI_MasterTX(0x00);
-
-  uint8_t echo = SPI_MasterRX();
-
-  SPI_MasterTX(0x00);
-
-  /* If slave echoes back signal all good */
-  if (echo == 0x53)  {
-    return 1;
-  }
-
-  return 0;
-}
-
-
-/* Writes 0xFF to program memory and EEPROM  */
-void SPI_ChipErase() {
-
-  SPI_MasterTX(0xAC);
-  SPI_MasterTX(0x80);
-  SPI_MasterTX(0x00);
-  SPI_MasterTX(0x00);
-
-  
-}
-
-/* Check if the chip is ready to be programmed */
-uint8_t SPI_CheckReady() {
-  SPI_MasterTX(0xF0);
-  SPI_MasterTX(0x00);
-  SPI_MasterTX(0x00);
-  SPI_MasterTX(0x00);
-
-  return SPI_MasterRX();
-}
-
-/* Loads data into address[5:0] of page buffer*/
-void SPI_LoadProg(uint16_t address, uint16_t data)  {
-
-  /* Load low data byte */
-  SPI_MasterTX(0x40);
-  SPI_MasterTX(0x00);
-  SPI_MasterTX((uint8_t) address);
-  SPI_MasterTX((uint8_t) data);
-
-  /* Load high data byte */
-  SPI_MasterTX(0x48);
-  SPI_MasterTX(0x00);
-  SPI_MasterTX((uint8_t) address);
-  SPI_MasterTX((uint8_t) (data>>8));
-}
-
-/* write the page of address[13:6] */
-void SPI_WritePage(uint16_t address) {
-  SPI_MasterTX(0x4c);
-  SPI_MasterTX((uint8_t) (address>>8));
-  SPI_MasterTX((uint8_t) address);
-  SPI_MasterTX(0x00);
-
-  /* Wait for page write */
-  _delay_ms(1);
-  while(!SPI_CheckReady()) {
-    _delay_ms(1);
+  /* Signal if prog enable was successful */
+  if (tries < MAX_PROG_ENABLE_TRIES) {
+    packet_buffer[PACKET_STATUS_POS] = OK;
+  } else {
+    packet_buffer[PACKET_STATUS_POS] = EXEC_ERR;
   }
   
+  current_state = state_send_packet;
 }
 
-char SPI_ReadLow(uint16_t address) {
-  SPI_MasterTX(0x20);
-  SPI_MasterTX(address>>8);
-  SPI_MasterTX((uint8_t) address);
-  SPI_MasterTX(0x0);
 
-  return SPI_MasterRX();
+/* Waits for a packet and decodes its instruction*/
+void state_recieve_packet() {
+
+  /* Get frame start magic */
+  uint16_t magic_num = (uint16_t) USART_rx();
+
+  magic_num = magic_num << 8;
+  magic_num = magic_num | (uint16_t) USART_rx();
+
+
+  /* Notify that the packet has an incorrect start frame and return */
+  if (magic_num != FRAME_START_MAGIC) {
+    packet_buffer[PACKET_STATUS_POS] = MALFORMED_PACKET;
+
+    current_state = state_send_packet;
+    return;
+  }
+
+
+  /* Get packet data */
+  for (int i = 0; i < PACKET_SIZE; i++) {
+    packet_buffer[i] = USART_rx();
+  }
+
+  /* Verify ending packet */
+  magic_num = (uint16_t) USART_rx();
+
+  magic_num = magic_num << 8;
+  magic_num = magic_num | (uint16_t) USART_rx();
+
+
+  /* Notify that the packet has an incorrect start frame and return */
+  if (magic_num != FRAME_END_MAGIC) {
+    packet_buffer[PACKET_STATUS_POS] = MALFORMED_PACKET;
+
+    current_state = state_send_packet;
+    return;
+  }
+
+  /* decode packet instruction */
+  switch (packet_buffer[PACKET_INST_POS]) {
+  case PROG_ENABLE:
+    current_state = state_enable_programming;
+    break;
+  case CHIP_ERASE:
+    current_state = state_erase_chip;
+    break;
+  case WRITE_FLASH:
+    current_state = state_write_flash;
+    break;
+  case READ_FLASH:
+    current_state = state_read_flash;
+    break;
+  } 
 }
+
+
+/* Sends the contenst of the packet buffer */
+void state_send_packet() {
+  /* Send frame start magic number */
+  USART_tx((unsigned char)FRAME_START_MAGIC);
+  USART_tx((unsigned char)(FRAME_START_MAGIC >> 8));
+
+  for (int i = 0; i < PACKET_SIZE; i++) {
+    USART_tx(packet_buffer[i]);
+  }
+
+  /* Send frame end magic number */
+
+  USART_tx((unsigned char)FRAME_END_MAGIC);
+  USART_tx((unsigned char)(FRAME_END_MAGIC >> 8));
+
+  current_state = state_recieve_packet;
+}
+
