@@ -4,7 +4,7 @@ CC = avr-gcc -Wall -std=c99
 
 CFLAGS = -mmcu=atmega328p -O1
 
-OBJFILES = main.o spi.o iohelper.o
+OBJFILES = main.o spi.o iohelper.o usart.o instructions.o
 
 
 # Name of the elf file

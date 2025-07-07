@@ -2,20 +2,52 @@
 #include <avr/sfr_defs.h>
 #include <stdint.h>
 
-#include <util/delay.h>
 
 #include "iohelper.h"
 #include "spi.h"
 #include "instructions.h"
-#include "packet.h"
 #include "usart.h"
+
+/* For delay  */
+#define F_CPU 16000000L
+#include <util/delay.h>
 
 
 #define RESET 2
 
-#define USART_UBRR_VAL 77
+#define USART_UBRR_VAL 103
 
 #define MAX_PROG_ENABLE_TRIES 5
+
+
+
+#define PACKET_SIZE 1
+#define PACKET_STATUS_POS 0
+#define PACKET_INST_POS 0
+#define PACKET_DATA_START 1
+
+
+
+#define FRAME_START_MAGIC 0xCEC4
+#define FRAME_END_MAGIC 0x0F14
+#define FRAME_SIZE PACKET_SIZE + 4
+
+
+
+
+enum PACKET_INSTRUCTION_TYPE {
+  PROG_ENABLE,
+  CHIP_ERASE,
+  WRITE_FLASH,
+  READ_FLASH,
+  WRITE_EEPROM,
+  READ_EEPROM,
+  WRITE_FUSE,
+  READ_FUSE
+};
+
+enum PACKET_ERROR_STATUS {OK, MALFORMED_PACKET, EXEC_ERR};
+
 
 
 
@@ -68,6 +100,7 @@ void state_init() {
   SPI_master_init();
   USART_init(USART_UBRR_VAL);
 
+ 
   current_state = state_recieve_packet;
 }
 
@@ -105,11 +138,14 @@ void state_enable_programming() {
 /* Waits for a packet and decodes its instruction*/
 void state_recieve_packet() {
 
-  /* Get frame start magic */
-  uint16_t magic_num = (uint16_t) USART_rx();
 
-  magic_num = magic_num << 8;
-  magic_num = magic_num | (uint16_t) USART_rx();
+
+  uint8_t lsb = USART_rx();
+  uint8_t msb = USART_rx();
+  
+  uint16_t magic_num = ((uint16_t) msb << 8) | lsb;
+
+  
 
 
   /* Notify that the packet has an incorrect start frame and return */
@@ -127,10 +163,10 @@ void state_recieve_packet() {
   }
 
   /* Verify ending packet */
-  magic_num = (uint16_t) USART_rx();
-
-  magic_num = magic_num << 8;
-  magic_num = magic_num | (uint16_t) USART_rx();
+  lsb = USART_rx();
+  msb = USART_rx();
+  
+  magic_num = ((uint16_t) msb << 8) | lsb;
 
 
   /* Notify that the packet has an incorrect start frame and return */
@@ -141,21 +177,24 @@ void state_recieve_packet() {
     return;
   }
 
+  packet_buffer[PACKET_STATUS_POS] = OK;
+
   /* decode packet instruction */
   switch (packet_buffer[PACKET_INST_POS]) {
   case PROG_ENABLE:
-    current_state = state_enable_programming;
+    /* current_state = state_enable_programming; */
     break;
   case CHIP_ERASE:
-    current_state = state_erase_chip;
+    /* current_state = state_erase_chip; */
     break;
   case WRITE_FLASH:
-    current_state = state_write_flash;
+    /* current_state = state_write_flash; */
     break;
   case READ_FLASH:
-    current_state = state_read_flash;
+    /* current_state = state_read_flash; */
     break;
-  } 
+  }
+  current_state = state_send_packet;
 }
 
 
@@ -173,7 +212,6 @@ void state_send_packet() {
 
   USART_tx((unsigned char)FRAME_END_MAGIC);
   USART_tx((unsigned char)(FRAME_END_MAGIC >> 8));
-
   current_state = state_recieve_packet;
 }
 
