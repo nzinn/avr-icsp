@@ -15,8 +15,11 @@
 
 #define RESET 2
 
+/* Value for 9600 baud rate */
 #define USART_UBRR_VAL 103
 
+
+/* Number of attempts to sync with MCU */
 #define MAX_PROG_ENABLE_TRIES 5
 
 
@@ -24,13 +27,16 @@
 #define PACKET_SIZE 256
 #define PACKET_STATUS_POS 0
 #define PACKET_INST_POS 0
-#define PACKET_DATA_START 1
+
+#define PACKET_FLASH_MSB 1
+#define PACKET_FLASH_LSB 2
+#define PACKET_FLASH_LENGTH 3
+#define PACKET_FLASH_DATA 4
 
 
-
+/* Values used to delimit end and start of frames */
 #define FRAME_START_MAGIC 0xCEC4
 #define FRAME_END_MAGIC 0x0F14
-#define FRAME_SIZE PACKET_SIZE + 4
 
 
 
@@ -152,16 +158,16 @@ void state_recieve_packet() {
   /* decode packet instruction */
   switch (packet_buffer[PACKET_INST_POS]) {
   case PROG_ENABLE:
-    /* current_state = state_enable_programming; */
+    current_state = state_enable_programming;
     break;
   case CHIP_ERASE:
-    /* current_state = state_erase_chip; */
+    current_state = state_erase_chip;
     break;
   case WRITE_FLASH:
-    /* current_state = state_write_flash; */
+    current_state = state_write_flash;
     break;
   case READ_FLASH:
-    /* current_state = state_read_flash; */
+    current_state = state_read_flash;
     break;
   }
   current_state = state_send_packet;
@@ -215,4 +221,52 @@ void state_enable_programming() {
   
   current_state = state_send_packet;
 }
+
+void state_erase_chip() {
+  SPI_chip_erase();
+
+  packet_buffer[PACKET_STATUS_POS] = OK;
+  current_state = state_send_packet;
+}
+
+
+void state_write_flash() {
+  uint8_t addr_msb = packet_buffer[PACKET_FLASH_MSB];
+  uint8_t addr_lsb = packet_buffer[PACKET_FLASH_LSB];
+  uint8_t data_length = packet_buffer[PACKET_FLASH_LENGTH];
+
+  /* An uneven amount of data or an invalid address will send an error*/
+  if (data_length % 2 != 0 || addr_msb > 127 || data_length >= PACKET_SIZE - 3) {
+    packet_buffer[PACKET_STATUS_POS] = MALFORMED_PACKET;
+
+    current_state = state_send_packet;
+    return;
+  }
+
+  /* Used to indicate if we need to write the flash after exiting the loop */
+  uint8_t flash_write = 0;
+  for (int i = PACKET_FLASH_DATA;
+       i < PACKET_FLASH_DATA + data_length && i < PACKET_SIZE; i += 2) {
+    flash_write = 0;
+    SPI_write_flash_addr(addr_lsb, packet_buffer[i], packet_buffer[i + 1]);
+
+    addr_lsb++;
+
+    /* If addr_lsb overflowed */
+    if (SREG & 1) {
+      /* Write page */
+      SPI_write_flash_page(addr_msb);
+      /* Increment msb */
+      addr_msb++;
+
+      flash_write = 1;
+    }
+  }
+
+  if (!flash_write) {
+    SPI_write_flash_page(addr_msb);
+  }
+  
+}
+
 

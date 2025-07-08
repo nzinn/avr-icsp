@@ -23,16 +23,9 @@ uint8_t SPI_prog_enable() {
 }
 
 
-/* Erases program memory and EEPROM to 0xFF */
-void SPI_chip_erase() {
-  SPI_master_tx(0xAC);
-  SPI_master_tx(0x80);
-  SPI_master_tx(0x00);
-  SPI_master_tx(0x00);
-}
 
-/* Check if the chip is ready to be programmed */
-uint8_t SPI_check_ready() {
+/* Check if the chip is ready for another instruction */
+uint8_t SPI_poll_ready() {
   SPI_master_tx(0xF0);
   SPI_master_tx(0x00);
   SPI_master_tx(0x00);
@@ -41,32 +34,46 @@ uint8_t SPI_check_ready() {
   return SPI_master_rx();
 }
 
+
+/* Erases program memory and EEPROM to 0xFF */
+void SPI_chip_erase() {
+  SPI_master_tx(0xAC);
+  SPI_master_tx(0x80);
+  SPI_master_tx(0x00);
+  SPI_master_tx(0x00);
+
+  /* Wait for chip erase */
+  while (!SPI_poll_ready()) {
+      _delay_ms(1);
+  }
+}
+
+
 /* Loads data into address[5:0] of page buffer*/
-void SPI_write_flash_addr(uint16_t address, uint16_t data)  {
+void SPI_write_flash_addr(uint8_t addr_lsb, uint8_t data_lsb, uint8_t data_msb)  {
 
   /* Load low data byte */
   SPI_master_tx(0x40);
   SPI_master_tx(0x00);
-  SPI_master_tx((uint8_t) address);
-  SPI_master_tx((uint8_t) data);
+  SPI_master_tx( addr_lsb);
+  SPI_master_tx( data_lsb);
 
   /* Load high data byte */
   SPI_master_tx(0x48);
   SPI_master_tx(0x00);
-  SPI_master_tx((uint8_t) address);
-  SPI_master_tx((uint8_t) (data>>8));
+  SPI_master_tx(addr_lsb);
+  SPI_master_tx(data_msb);
 }
 
 /* write the page of address[13:6] */
-void SPI_write_flash_page(uint16_t address) {
+void SPI_write_flash_page(uint8_t addr_msb) {
   SPI_master_tx(0x4c);
-  SPI_master_tx((uint8_t) (address>>8));
-  SPI_master_tx((uint8_t) address);
+  SPI_master_tx(addr_msb);
+  SPI_master_tx(0x00);
   SPI_master_tx(0x00);
 
   /* Wait for page write */
-  _delay_ms(1);
-  while(!SPI_check_ready()) {
+  while(!SPI_poll_ready()) {
     _delay_ms(1);
   }
   
