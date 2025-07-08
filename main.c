@@ -21,7 +21,7 @@
 
 
 
-#define PACKET_SIZE 1
+#define PACKET_SIZE 256
 #define PACKET_STATUS_POS 0
 #define PACKET_INST_POS 0
 #define PACKET_DATA_START 1
@@ -104,36 +104,6 @@ void state_init() {
   current_state = state_recieve_packet;
 }
 
-void state_enable_programming() {
-
-  /* Pull reset pin low */
-  set_pin_dir(RESET, OUTPUT);
-  dig_write(RESET, LOW);
-  /* Wait before sending prog enable command */
-  _delay_ms(20);
-
-
-  int tries = 0;
-  /* Send prog enable command and, if failed, send a positive pulse on the reset line*/
-  while(!SPI_prog_enable() && tries < MAX_PROG_ENABLE_TRIES) {
-    dig_write(RESET, HIGH);
-    _delay_us(8);
-    dig_write(RESET, LOW);
-    _delay_ms(20);
-    tries++;
-  }
-
-
-  /* Signal if prog enable was successful */
-  if (tries < MAX_PROG_ENABLE_TRIES) {
-    packet_buffer[PACKET_STATUS_POS] = OK;
-  } else {
-    packet_buffer[PACKET_STATUS_POS] = EXEC_ERR;
-  }
-  
-  current_state = state_send_packet;
-}
-
 
 /* Waits for a packet and decodes its instruction*/
 void state_recieve_packet() {
@@ -213,5 +183,36 @@ void state_send_packet() {
   USART_tx((unsigned char)FRAME_END_MAGIC);
   USART_tx((unsigned char)(FRAME_END_MAGIC >> 8));
   current_state = state_recieve_packet;
+}
+
+
+void state_enable_programming() {
+
+  /* Pull reset pin low */
+  set_pin_dir(RESET, OUTPUT);
+  dig_write(RESET, LOW);
+  /* Wait before sending prog enable command */
+  _delay_ms(20);
+
+
+  int tries = 0;
+  /* Send prog enable command and, if failed, send a positive pulse on the reset line*/
+  while(!SPI_prog_enable() && tries < MAX_PROG_ENABLE_TRIES) {
+    dig_write(RESET, HIGH);
+    _delay_us(8);
+    dig_write(RESET, LOW);
+    _delay_ms(20);
+    tries++;
+  }
+
+
+  /* Signal if prog enable was successful */
+  if (tries < MAX_PROG_ENABLE_TRIES) {
+    packet_buffer[PACKET_STATUS_POS] = OK;
+  } else {
+    packet_buffer[PACKET_STATUS_POS] = EXEC_ERR;
+  }
+  
+  current_state = state_send_packet;
 }
 
