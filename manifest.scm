@@ -832,7 +832,7 @@ Collection.")
   (memoize cross-gcc-toolchain/implementation))
 
 
-(packages->manifest (list (cross-gcc-toolchain "avr") clang coreutils sed))
+(packages->manifest (list (cross-gcc-toolchain "avr") clang coreutils sed git))
 ;;; Concrete cross tool chains are instantiated like this:
 ;;
 ;; (define-public xgcc-armhf

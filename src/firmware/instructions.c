@@ -28,7 +28,7 @@ uint8_t SPI_prog_enable() {
 
 
 /* Check if the chip is ready for another instruction */
-uint8_t SPI_poll_ready() {
+static uint8_t SPI_poll_ready() {
   SPI_master_tx(0xF0);
   SPI_master_tx(0x00);
   SPI_master_tx(0x00);

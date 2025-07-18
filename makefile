@@ -13,7 +13,7 @@ NAME = SPI_Test
 $(NAME).elf: $(OBJFILES)
 	$(CC) $(CFLAGS) $(OBJFILES) -o $(NAME).elf
 
-%.o: %.c
+%.o: ./src/%.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
 install:
