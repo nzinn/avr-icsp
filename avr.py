@@ -34,6 +34,8 @@ EXEC_ERR = 2
 PACKET_STATUS_POS = 0
 
 
+PRINT_WIDTH = 16
+
 
 def send_packet(ser, data):
     if len(data) != PACKET_SIZE:
@@ -54,8 +56,9 @@ def rec_packet(ser):
     if start_magic != START_MAGIC or end_magic != END_MAGIC:
         print("Frame magic's not equal!")
         return None
-    return frame[2:(PACKET_SIZE - 2)]
+    return frame[2:(PACKET_SIZE + 2)]
 
+        
 
 def send_rec_packet(ser, data):
     send_packet(ser, data)
@@ -65,7 +68,10 @@ def send_rec_packet(ser, data):
 def write_file_to_flash(ser, filename):
     hex_file = IntelHex(filename)
     file_num_bytes = len(hex_file)
+
+    programmed_bytes = 0
     
+    print(f'File segments: {hex_file.segments()}')
     addr = 0
     while True:
         packet = bytearray()
@@ -80,6 +86,8 @@ def write_file_to_flash(ser, filename):
         packet_num_bytes = PAGE_NUM_BYTES
         for offset in range(PAGE_NUM_BYTES):
             if (addr * 2 + offset) < file_num_bytes:
+                programmed_bytes += 1
+
                 packet.append(hex_file[int(addr * 2) + offset])
             else:
                 packet_num_bytes = offset
@@ -87,11 +95,13 @@ def write_file_to_flash(ser, filename):
                 break
 
         if packet_num_bytes > 0:
-            print('Sent page')
+            print(packet.hex(' '))
+            print()
             send_rec_packet(ser, packet)
         else:
             break
         addr += PAGE_NUM_BYTES / 2
+    print(f'Final bytes: {programmed_bytes}\n')
 
 
 
@@ -100,12 +110,30 @@ def verify_program(ser, filename):
     hex_file = IntelHex(filename)
     file_num_bytes = len(hex_file)
 
-    for i in range(ceil(file_num_bytes / PAGE_NUM_BYTES / 2)):
+
+    flash_contents = bytearray()
+    for i in range(ceil(file_num_bytes / PAGE_NUM_BYTES)):
         packet = bytearray()
         packet.append(READ_FLASH_PAGE)
         packet.extend(int(i * PAGE_NUM_BYTES / 2).to_bytes(2, 'little'))
         packet.extend(bytes(1 + PAGE_NUM_BYTES))
-        print(send_rec_packet(ser, packet).hex(' '))
+        rec = send_rec_packet(ser, packet)
+        print(rec.hex(' '))
+        print()
+        if rec:
+            flash_contents.extend(rec[HEADER_LENGTH:])
+        else:
+            print('Error retrieving flash contents.')
+            exit()
+
+    
+    for i in range(file_num_bytes):
+        if hex_file[i] != flash_contents[i]:
+
+            hex_file.dump()
+            print(f'Flash and file not equal! \n\n {hex_file[i]} != {flash_contents[i]} at address {i} \n\n{flash_contents.hex(" ")}') 
+            exit()
+        
 
         
 def main():
@@ -122,8 +150,6 @@ def main():
         packet[0] = PROG_ENABLE
         rec = send_rec_packet(ser, packet)
 
-        print(rec.hex())
-        
         if rec[PACKET_STATUS_POS] != OK:
             print("Couldn't enable programming!")
             print(rec.hex(' '))
@@ -139,6 +165,7 @@ def main():
         print('Writing flash...')
         write_file_to_flash(ser, sys.argv[1])
 
+        print('Verifying flash...')
         verify_program(ser, sys.argv[1])
         print('finished')
 

@@ -1,6 +1,9 @@
 #include "instructions.h"
 #include "spi.h"
+
+/* For delay  */
 #define F_CPU 16000000L
+
 #include <util/delay.h>
 
 
@@ -31,7 +34,8 @@ uint8_t SPI_poll_ready() {
   SPI_master_tx(0x00);
   SPI_master_tx(0x00);
 
-  return SPI_master_rx();
+  /* Only lsb matters */
+  return !(SPI_master_rx() & 1);
 }
 
 
@@ -65,11 +69,33 @@ void SPI_write_flash_addr(uint8_t addr_lsb, uint8_t data_lsb, uint8_t data_msb) 
   SPI_master_tx(data_msb);
 }
 
+
+uint8_t SPI_read_flash_addr_high(uint8_t addr_lsb, uint8_t addr_msb) {
+  SPI_master_tx(0x28);
+  SPI_master_tx(addr_msb);
+  SPI_master_tx(addr_lsb);
+  SPI_master_tx(0x0);
+
+  return SPI_master_rx();
+  
+}
+
+uint8_t SPI_read_flash_addr_low(uint8_t addr_lsb, uint8_t addr_msb) {
+  SPI_master_tx(0x20);
+  SPI_master_tx(addr_msb);
+  SPI_master_tx(addr_lsb);
+  SPI_master_tx(0x0);
+
+  return SPI_master_rx();
+  
+}
+
+
 /* write the page of address[13:6] */
-void SPI_write_flash_page(uint8_t addr_msb) {
+void SPI_write_flash_page(uint8_t addr_lsb, uint8_t addr_msb) {
   SPI_master_tx(0x4c);
   SPI_master_tx(addr_msb);
-  SPI_master_tx(0x00);
+  SPI_master_tx(addr_lsb);
   SPI_master_tx(0x00);
 
   /* Wait for page write */
@@ -79,11 +105,5 @@ void SPI_write_flash_page(uint8_t addr_msb) {
   
 }
 
-char SPI_ReadLow(uint16_t address) {
-  SPI_master_tx(0x20);
-  SPI_master_tx(address>>8);
-  SPI_master_tx((uint8_t) address);
-  SPI_master_tx(0x0);
 
-  return SPI_master_rx();
-}
+

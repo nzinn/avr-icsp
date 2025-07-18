@@ -4,6 +4,11 @@
 
 #include "spi.h"
 
+/* For delay  */
+#define F_CPU 16000000L
+#include <util/delay.h>
+
+
 #define DD_MOSI DDB3
 #define DD_SCK DDB5
 #define DD_SS DDB2
@@ -22,6 +27,8 @@ void SPI_master_tx(char data) {
   /* Wait to transmit */
   while (!(SPSR & (1<<SPIF)))
     ;
+
+  _delay_us(8);
 }
 
 /* Transmit a string over MOSI */
