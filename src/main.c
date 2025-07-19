@@ -51,6 +51,7 @@ enum PACKET_INSTRUCTION_TYPE {
 
 enum PACKET_ERROR_STATUS { OK, MALFORMED_PACKET, EXEC_ERR };
 
+
 typedef void (*state_func_t)();
 
 /* Init functino */
@@ -89,8 +90,9 @@ int main() {
   }
 }
 
+
+/* Initialize usart and SPI and await for packets */
 void state_init() {
-  /* Initialize usart and SPI and await for packets */
   SPI_master_init();
   USART_init(USART_UBRR_VAL);
 

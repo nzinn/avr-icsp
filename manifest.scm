@@ -31,6 +31,7 @@
   #:use-module (gnu packages avr)
   #:use-module (gnu packages gcc)
   #:use-module (gnu packages base)
+  #:use-module (gnu packages version-control)
   #:use-module (gnu packages linux)
   #:use-module (gnu packages hurd)
   #:use-module (gnu packages base)
