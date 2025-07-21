@@ -1,5 +1,7 @@
-#include "instructions.h"
-#include "spi.h"
+#include "spi_instructions.h"
+#include "spi_base.h"
+#include "iohelper.h"
+
 
 /* For delay  */
 #define F_CPU 16000000L
@@ -7,8 +9,10 @@
 #include <util/delay.h>
 
 
-/* Enables programming mode on chip, returns true on success, false on error */
+/* Enables programming mode on chip, signals if synchronization was achieved. */
 uint8_t SPI_prog_enable() {
+
+  
   SPI_master_tx(0xAC);
   SPI_master_tx(0x53);
   SPI_master_tx(0x00);
@@ -24,6 +28,7 @@ uint8_t SPI_prog_enable() {
 
   return 0;
 }
+
 
 
 

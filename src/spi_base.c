@@ -2,7 +2,7 @@
 #include <avr/sfr_defs.h>
 #include <stdint.h>
 
-#include "spi.h"
+#include "spi_base.h"
 
 /* For delay  */
 #define F_CPU 16000000L
