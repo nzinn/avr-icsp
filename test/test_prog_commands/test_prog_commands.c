@@ -1,4 +1,6 @@
-#include "unity.h"
+#include "../unity.h"
+#include "prog_commands.h"
+
 
 void setUp(void) {
   
