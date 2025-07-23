@@ -55,19 +55,35 @@ TEST_CC = gcc
 TEST_CFLAGS = -O1 -Wall -std=c99 -I $(TEST_DIR)/include
 
 
-test: $(TEST_BIN)
+.PHONY: test test_build
+
+test: $(TEST_BIN) | test_build
 	find $(TEST_BUILD_DIR) -maxdepth 1 -type f -executable -exec {} \;
 
 
-$(TEST_BUILD_DIR)/test_%.bin: $(TEST_BUILD_DIR)/test_%.o $(TEST_BUILD_DIR)/%.o
+$(TEST_BUILD_DIR)/test_%.bin: $(TEST_BUILD_DIR)/test_%.o $(TEST_BUILD_DIR)/%.o unity.o
 	$(TEST_CC) $(TEST_CFLAGS) $^ -o $@
 
+
+
+
 # Test harnesses
-$(TEST_BUILD_DIR)/%.o: $(TEST_DIR)/%/%.c | test_build 
+.SECONDEXPANSION:
+$(TEST_BUILD_DIR)/test_%.o: $(TEST_DIR)/test_$$(*F)/test_$$(*F).c | test_build 
 	$(TEST_CC) $(TEST_CFLAGS) -c $< -o $@
 
-$(TEST_DIR)/%.c: $(SRC_DIR)/$(notdir %.c)
+
+
+$(TEST_BUILD_DIR)/%.o: $(TEST_DIR)/test_$$(*F)/$$(*F).c | test_build 
+	$(TEST_CC) $(TEST_CFLAGS) -I $(TEST_DIR)/test_$(*F) -c $< -o $@
+
+
+
+$(TEST_DIR)/%.c: $(SRC_DIR)/$$(notdir %.c)
 	cp $< $@
+
+unity.o: $(TEST_DIR)/unity.c
+	$(TEST_CC) $(TEST_CFLAGS) -c $< -o $@
 
 test_build:
 	mkdir -p $(TEST_BUILD_DIR)
