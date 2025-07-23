@@ -52,7 +52,7 @@ TEST_BIN := $(filter-out $(EXCLUDE), $(TEST_BIN_ALL))
 
 
 TEST_CC = gcc 
-TEST_CFLAGS = -O1 -Wall -std=c99 -I $(TEST_DIR)/include
+TEST_CFLAGS = -O1 -std=c99
 
 
 .PHONY: test test_build

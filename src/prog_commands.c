@@ -16,7 +16,7 @@ uint8_t PROG_enable_programming(uint8_t reset_pin, uint8_t num_tries) {
   _delay_ms(20);
 
   int tries = 0;
-  while (!SPI_prog_enable() && tries < num_tries) {
+  while (!SPI_prog_enable() && tries < num_tries - 1) {
     dig_write(reset_pin, HIGH);
     _delay_us(8);
     dig_write(reset_pin, LOW);
@@ -24,7 +24,7 @@ uint8_t PROG_enable_programming(uint8_t reset_pin, uint8_t num_tries) {
     tries++;
   }
 
-  if (tries >= num_tries) {
+  if (tries >= num_tries - 1) {
     return 0;
   }
 
@@ -37,7 +37,7 @@ uint8_t PROG_write_flash(uint8_t *buf, uint8_t buf_size,
                          uint8_t page_num_words, uint8_t addr_lsb,
                          uint8_t addr_msb) {
 
-  if (buf_size % 2 != 0) {
+  if (buf_size % 2 != 0 || buf == 0) {
     return 0;
   }
 
