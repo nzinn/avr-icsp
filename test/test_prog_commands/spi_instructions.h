@@ -9,5 +9,10 @@ uint8_t SPI_read_flash_addr_high(uint8_t, uint8_t);
 uint8_t SPI_read_flash_addr_low(uint8_t, uint8_t);
 
 
-void SPI_write_flash_page(uint8_t, uint8_t); 
+void SPI_write_flash_page(uint8_t, uint8_t);
+
+uint8_t SPI_read_fuse_low();
+uint8_t SPI_read_fuse_high();
+
+
 #endif

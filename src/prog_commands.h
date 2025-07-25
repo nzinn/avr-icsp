@@ -11,5 +11,7 @@ void PROG_read_flash(uint8_t *buf, uint8_t num_bytes, uint8_t addr_lsb, uint8_t 
 
 uint8_t PROG_enable_programming(uint8_t reset_pin, uint8_t num_tries);
 
+void PROG_read_fuse_bits(uint8_t *buf);
+
 #endif
 

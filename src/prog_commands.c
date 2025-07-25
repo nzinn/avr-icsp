@@ -43,12 +43,19 @@ uint8_t PROG_write_flash(uint8_t *buf, uint8_t buf_size,
 
 
   uint16_t addr = ((uint16_t) addr_msb) << 8 | addr_lsb;
-  
-  for (int i = 0; i + 1 < buf_size; i+=2) {
-    SPI_write_flash_addr((uint8_t) addr, buf[i], buf[i + 1]);
+
+  for (int i = 0; i + 1 < buf_size; i += 2) {
+
+
+    uint8_t addr_lsb = (uint8_t)addr;
+    uint8_t addr_msb = (uint8_t) (addr >> 8);
+   
+
+    
+    SPI_write_flash_addr(addr_lsb, buf[i], buf[i + 1]);
 
     if (addr % page_num_words == 0 && addr != 0) {
-      SPI_write_flash_page((uint8_t) addr, (uint8_t) (addr >> 8));      
+      SPI_write_flash_page(addr_lsb, addr_msb);      
     }
     
     addr++;
@@ -56,8 +63,9 @@ uint8_t PROG_write_flash(uint8_t *buf, uint8_t buf_size,
 
   /* If we didn't write the page on the last word, write it now */
   addr--;
+  
   if (addr % page_num_words != 0) {
-      SPI_write_flash_page((uint8_t) addr, (uint8_t) (addr >> 8));          
+    SPI_write_flash_page(addr_lsb, addr_msb);          
   }
 
 
@@ -71,11 +79,22 @@ void PROG_read_flash(uint8_t *buf, uint8_t num_bytes, uint8_t addr_lsb, uint8_t 
 
   uint16_t addr = ((uint16_t) addr_msb << 8) | (uint16_t) addr_lsb;
 
-  for (int i = 0; i + 1 < num_bytes; i+=2) {
-    buf[i] = SPI_read_flash_addr_low((uint8_t) addr, (uint8_t) (addr_msb>>8));
-    buf[i + 1] = SPI_read_flash_addr_high((uint8_t) addr, (uint8_t) (addr_msb>>8));
+  for (int i = 0; i + 1 < num_bytes; i += 2) {
+
+    uint8_t addr_lsb = (uint8_t)addr;
+    uint8_t addr_msb = (uint8_t) (addr >> 8);
+    
+    buf[i] = SPI_read_flash_addr_low(addr_lsb, addr_msb);
+    buf[i + 1] = SPI_read_flash_addr_high(addr_lsb, addr_msb);
 
     addr++;
   }
   
+}
+
+
+/* Reads the low and high fuse bytes and puts them into buf */
+void PROG_read_fuse_bits(uint8_t *buf) {
+  buf[0] = SPI_read_fuse_low();
+  buf[1] = SPI_read_fuse_high();
 }

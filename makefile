@@ -80,7 +80,7 @@ $(TEST_BUILD_DIR)/%.o: $(TEST_DIR)/test_$$(*F)/$$(*F).c | test_build
 
 
 $(TEST_DIR)/%.c: $(SRC_DIR)/$$(notdir %.c)
-	cp $< $@
+	cp $< $@ && cp $(SRC_DIR)/$(*F).h $(TEST_DIR)/$(*D)/$(*F).h
 
 unity.o: $(TEST_DIR)/unity.c
 	$(TEST_CC) $(TEST_CFLAGS) -c $< -o $@
