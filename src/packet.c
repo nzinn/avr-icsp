@@ -10,7 +10,7 @@
 
 
 /* Recieves a UART packet. Signals 0 on error, 1 on success */
-uint8_t PACK_rec_packet(uint8_t *buf, uint8_t buf_size) {
+PK_STATUS PACK_rec_packet(uint8_t *buf, uint8_t buf_size) {
     uint8_t lsb = USART_rx();
   uint8_t msb = USART_rx();
 
@@ -18,7 +18,7 @@ uint8_t PACK_rec_packet(uint8_t *buf, uint8_t buf_size) {
 
   /* Notify that the packet has an incorrect start frame and return */
   if (magic_num != FRAME_START_MAGIC) {
-    return 0;
+    return PK_ERR;
   }
 
   /* Get packet data */
@@ -34,10 +34,10 @@ uint8_t PACK_rec_packet(uint8_t *buf, uint8_t buf_size) {
 
   /* Notify that the packet has an incorrect start frame and return */
   if (magic_num != FRAME_END_MAGIC) {
-    return 0;
+    return PK_ERR;
   }
 
-  return 1;
+  return PK_OK;
 }
 
 void PACK_send_packet(uint8_t *buf, uint8_t buf_size) {

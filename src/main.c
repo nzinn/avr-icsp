@@ -40,7 +40,6 @@ enum PACKET_INSTRUCTION_TYPE {
   READ_FUSE
 };
 
-enum PACKET_STATUS { OK, MALFORMED_PACKET, EXEC_ERR };
 
 typedef void (*state_func_t)();
 

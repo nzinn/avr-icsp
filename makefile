@@ -13,7 +13,7 @@ BUILD_DIR := build
 OBJFILES = $(addprefix $(bUILD_DIR)/,$(OBJ_NAMES))
 
 # Name of the elf file
-NAME = SPI_Test
+NAME = SPI_PROG 
 
 $(NAME).elf: $(OBJFILES)
 	$(CC) $(CFLAGS) $(OBJFILES) -o $(NAME).elf
