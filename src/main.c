@@ -135,14 +135,13 @@ void state_enable_programming() {
 
 void state_erase_chip() {
   SPI_chip_erase();
-
   packet_buffer[PACKET_STATUS_POS] = OK;
   current_state = state_send_packet;
 }
 
 void state_write_flash() {
 
-  PROG_write_flash(packet_buffer, PACKET_SIZE, PAGE_NUM_WORDS, packet_buffer[PACKET_ADDR_LSB], packet_buffer[PACKET_ADDR_MSB]);
+  PROG_write_flash(packet_buffer + HEADER_SIZE, PACKET_SIZE, PAGE_NUM_WORDS, packet_buffer[PACKET_ADDR_LSB], packet_buffer[PACKET_ADDR_MSB]);
 
   packet_buffer[PACKET_STATUS_POS] = OK;
   current_state = state_send_packet;
@@ -150,7 +149,7 @@ void state_write_flash() {
 
 void state_read_flash() {
 
-  PROG_read_flash(packet_buffer, PACKET_SIZE, packet_buffer[PACKET_ADDR_LSB], packet_buffer[PACKET_ADDR_MSB]);
+  PROG_read_flash(packet_buffer + HEADER_SIZE, PACKET_SIZE, packet_buffer[PACKET_ADDR_LSB], packet_buffer[PACKET_ADDR_MSB]);
 
   packet_buffer[PACKET_STATUS_POS] = OK;
   current_state = state_send_packet;

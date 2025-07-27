@@ -3,15 +3,19 @@
 #include <stdint.h>
 
 
-uint8_t PROG_write_flash(uint8_t *buf, uint8_t buf_size,
+typedef enum {PG_OK, PG_HARDWARE_ERR, PG_LOGIC_ERR} PG_STATUS;
+
+PG_STATUS PROG_write_flash(uint8_t *buf, uint8_t buf_size,
                          uint8_t page_num_words, uint8_t addr_lsb,
                          uint8_t addr_msb);
 
-void PROG_read_flash(uint8_t *buf, uint8_t num_bytes, uint8_t addr_lsb, uint8_t addr_msb);
+PG_STATUS PROG_read_flash(uint8_t *buf, uint8_t num_bytes, uint8_t addr_lsb, uint8_t addr_msb);
 
-uint8_t PROG_enable_programming(uint8_t reset_pin, uint8_t num_tries);
+PG_STATUS PROG_enable_programming(uint8_t reset_pin, uint8_t num_tries);
 
-void PROG_read_fuse_bits(uint8_t *buf);
+PG_STATUS PROG_read_fuse_bits(uint8_t *buf);
+
+PG_STATUS PROG_clock_set_crystal(void);
 
 #endif
 

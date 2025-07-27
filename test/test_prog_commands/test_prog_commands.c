@@ -6,6 +6,7 @@
 
 #include "../fff.h"
 #include "../../src/prog_commands.h"
+#include "spi_instructions.h"
 #include <stdlib.h>
 #include <math.h>
 
@@ -24,14 +25,22 @@ FAKE_VOID_FUNC(dig_read, int);
 
 
 /* spi_instructions.h */
-FAKE_VALUE_FUNC(uint8_t, SPI_prog_enable);
-FAKE_VOID_FUNC(SPI_chip_erase);
-FAKE_VOID_FUNC(SPI_write_flash_addr, uint8_t, uint8_t, uint8_t);
-FAKE_VALUE_FUNC(uint8_t, SPI_read_flash_addr_high, uint8_t, uint8_t);
-FAKE_VALUE_FUNC(uint8_t, SPI_read_flash_addr_low, uint8_t, uint8_t);
-FAKE_VOID_FUNC(SPI_write_flash_page, uint8_t, uint8_t);
-FAKE_VALUE_FUNC(uint8_t, SPI_read_fuse_low);
-FAKE_VALUE_FUNC(uint8_t, SPI_read_fuse_high);
+FAKE_VALUE_FUNC(SP_STATUS, SPI_prog_enable);
+FAKE_VALUE_FUNC(SP_STATUS, SPI_chip_erase);
+FAKE_VALUE_FUNC(SP_STATUS, SPI_write_flash_addr, uint8_t, uint8_t, uint8_t);
+FAKE_VALUE_FUNC(SP_STATUS, SPI_read_flash_addr_high, uint8_t, uint8_t, uint8_t*);
+FAKE_VALUE_FUNC(SP_STATUS, SPI_read_flash_addr_low, uint8_t, uint8_t, uint8_t*);
+FAKE_VALUE_FUNC(SP_STATUS, SPI_write_flash_page, uint8_t, uint8_t);
+
+FAKE_VALUE_FUNC(SP_STATUS, SPI_read_fuse_low, uint8_t*);
+FAKE_VALUE_FUNC(SP_STATUS, SPI_read_fuse_high, uint8_t*);
+
+
+FAKE_VALUE_FUNC(SP_STATUS, SPI_write_fuse_low, uint8_t);
+FAKE_VALUE_FUNC(SP_STATUS, SPI_write_fuse_high, uint8_t);
+
+
+
 
 /* util/delay.h */
 
@@ -46,6 +55,10 @@ uint8_t test_buffer[BUFFER_SIZE];
 uint8_t test_buffer_low[BUFFER_SIZE / 2];
 uint8_t test_buffer_high[BUFFER_SIZE / 2];
 
+/* For read flash fakes */
+int read_flash_low_index = 0;
+int read_flash_high_index = 0;
+
 void setUp(void) {
   RESET_FAKE(set_pin_dir);
   RESET_FAKE(dig_write);
@@ -59,12 +72,17 @@ void setUp(void) {
   RESET_FAKE(SPI_write_flash_addr);
   RESET_FAKE(SPI_read_flash_addr_high);
   RESET_FAKE(SPI_read_flash_addr_low);
-
+  RESET_FAKE(SPI_read_fuse_low);
+  RESET_FAKE(SPI_read_fuse_high);
+  
   RESET_FAKE(SPI_write_flash_page);
 
 
   int low_index = 0;
   int high_index = 0;
+
+  read_flash_low_index = 0;
+  read_flash_high_index = 0;
   
   for (int i = 0; i < BUFFER_SIZE; i++) {
     uint8_t rand_num = (uint8_t) rand();
@@ -86,21 +104,23 @@ void tearDown(void) {
 void test_write_flash(void) { TEST_ASSERT(1); }
 
 
+
+
 void test_enable_prog_success(void) {
  
-  SPI_prog_enable_fake.return_val = 1;
+  SPI_prog_enable_fake.return_val = SP_OK;
 
-  TEST_ASSERT(PROG_enable_programming(2, 3));
-  TEST_ASSERT_EQUAL_INT(SPI_prog_enable_fake.call_count, 1);
+  TEST_ASSERT_EQUAL(PG_OK, PROG_enable_programming(2, 3));
+  TEST_ASSERT_EQUAL_INT(1, SPI_prog_enable_fake.call_count);
 }
 
 
 void test_enable_prog_fail(void) {
  
-  SPI_prog_enable_fake.return_val = 0;
+  SPI_prog_enable_fake.return_val = SP_NO_ECHO;
 
-  TEST_ASSERT_FALSE(PROG_enable_programming(2, 3));
-  TEST_ASSERT_EQUAL_INT(SPI_prog_enable_fake.call_count, 3);
+  TEST_ASSERT_EQUAL(PG_HARDWARE_ERR, PROG_enable_programming(2, 3));
+  TEST_ASSERT_EQUAL_INT(3, SPI_prog_enable_fake.call_count);
 }
 
 
@@ -149,13 +169,29 @@ int verify_read_addresses(uint8_t start_lsb, uint8_t start_msb) {
 
 
 
+SP_STATUS read_flash_low_fake(uint8_t addr_lsb, uint8_t addr_msb,
+                              uint8_t *low_byte) {
+
+  *low_byte = test_buffer_low[read_flash_low_index++];
+  return SP_OK;
+}
+
+
+SP_STATUS read_flash_high_fake(uint8_t addr_lsb, uint8_t addr_msb,
+                              uint8_t *high_byte) {
+
+  *high_byte = test_buffer_high[read_flash_high_index++];
+  return SP_OK;
+}
+
 
 void test_read_flash_base() {
 
-  SET_RETURN_SEQ(SPI_read_flash_addr_low, test_buffer_low, BUFFER_SIZE / 2);
-  SET_RETURN_SEQ(SPI_read_flash_addr_high, test_buffer_high, BUFFER_SIZE / 2);
 
+  SPI_read_flash_addr_low_fake.custom_fake = read_flash_low_fake;
 
+  SPI_read_flash_addr_high_fake.custom_fake = read_flash_high_fake;
+  
   uint8_t check_buffer[BUFFER_SIZE];
   
   PROG_read_flash(check_buffer, BUFFER_SIZE, 0, 0);
@@ -168,9 +204,10 @@ void test_read_flash_base() {
 
 void test_read_flash_overflow() {
 
-  SET_RETURN_SEQ(SPI_read_flash_addr_low, test_buffer_low, BUFFER_SIZE / 2);
-  SET_RETURN_SEQ(SPI_read_flash_addr_high, test_buffer_high, BUFFER_SIZE / 2);
+  SPI_read_flash_addr_low_fake.custom_fake = read_flash_low_fake;
 
+  SPI_read_flash_addr_high_fake.custom_fake = read_flash_high_fake;
+  
 
   uint8_t check_buffer[BUFFER_SIZE];
 
@@ -235,6 +272,22 @@ void test_write_flash_overflow() {
 }
 
 
+
+
+const uint8_t fuse_low = 0xAC;
+const uint8_t fuse_high = 0xF1;
+
+SP_STATUS read_fuse_low_fake(uint8_t *low) {
+  *low = fuse_low;
+  return SP_OK;
+}
+
+SP_STATUS read_fuse_high_fake(uint8_t *high) {
+  *high = fuse_high;
+  return SP_OK;
+}
+
+
 void test_read_fuse_low(void) {
 
 
@@ -242,18 +295,26 @@ void test_read_fuse_low(void) {
   uint8_t buf[BUFFER_SIZE];
 
 
-  uint8_t fuse_low = 0xAC;
-  uint8_t fuse_high = 0x50;
-  
-  SPI_read_fuse_low_fake.return_val = fuse_low;
-  SPI_read_fuse_high_fake.return_val = fuse_high;
-  PROG_read_fuse_bits(buf);
+
+  SPI_read_fuse_low_fake.custom_fake = read_fuse_low_fake;
+  SPI_read_fuse_high_fake.custom_fake = read_fuse_high_fake;
+
+  PG_STATUS ret;
+  ret = PROG_read_fuse_bits(buf);
 
   
-  TEST_ASSERT_EQUAL_UINT8(buf[0], fuse_low);
-  TEST_ASSERT_EQUAL_UINT8(buf[1], fuse_high);
+  TEST_ASSERT_EQUAL_HEX8(fuse_low, buf[0]);
+  TEST_ASSERT_EQUAL_HEX8(fuse_high, buf[1]);
+  TEST_ASSERT_EQUAL(PG_OK, ret);
 }
 
+
+void test_set_clock_crystal(void) {
+  PG_STATUS ret = PROG_clock_set_crystal();
+  TEST_ASSERT_EQUAL_UINT8(SPI_write_fuse_low_fake.arg0_val, 0xF7);
+  TEST_ASSERT_EQUAL(ret, PG_OK);
+  
+}
 
 
 int main(void) {
@@ -265,6 +326,7 @@ int main(void) {
   RUN_TEST(test_write_flash_base);
   RUN_TEST(test_write_flash_overflow);
   RUN_TEST(test_read_fuse_low);
+  RUN_TEST(test_set_clock_crystal);
   return UNITY_END();
 }
 
