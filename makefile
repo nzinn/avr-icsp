@@ -10,7 +10,7 @@ SRC_DIR := src
 BUILD_DIR := build
 
 
-OBJFILES = $(addprefix $(bUILD_DIR)/,$(OBJ_NAMES))
+OBJFILES = $(addprefix $(BUILD_DIR)/,$(OBJ_NAMES))
 
 # Name of the elf file
 NAME = SPI_PROG 
@@ -58,7 +58,7 @@ TEST_CFLAGS = -O1 -std=c99
 .PHONY: test test_build
 
 test: $(TEST_BIN) | test_build
-	find $(TEST_BUILD_DIR) -maxdepth 1 -type f -executable -exec {} \;
+	./$(TEST_DIR)/run_tests.sh
 
 
 $(TEST_BUILD_DIR)/test_%.bin: $(TEST_BUILD_DIR)/test_%.o $(TEST_BUILD_DIR)/%.o unity.o
