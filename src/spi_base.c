@@ -20,6 +20,7 @@ DDRB |= (1 << DD_MOSI) | (1<<DD_SCK) | (1<<DD_SS);
 
   /* Enable SPI, set mode to master and clock to fck/64 */
  SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR1)|(1<<SPR0);
+
 }
 
 void SPI_master_tx(char data) {

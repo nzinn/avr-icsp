@@ -25,7 +25,7 @@ PG_STATUS PROG_enable_programming(uint8_t reset_pin, uint8_t num_tries) {
   }
 
   if (tries >= num_tries - 1) {
-    return PG_HARDWARE_ERR;
+    return PG_ERR;
   }
 
   return PG_OK;
@@ -38,7 +38,7 @@ PG_STATUS PROG_write_flash(uint8_t *buf, uint8_t buf_size,
                          uint8_t addr_msb) {
 
   if (buf_size % 2 != 0 || buf == 0) {
-    return PG_LOGIC_ERR;
+    return PG_ERR;
   }
 
 
@@ -53,12 +53,12 @@ PG_STATUS PROG_write_flash(uint8_t *buf, uint8_t buf_size,
 
 
     if (SPI_write_flash_addr(addr_lsb, buf[i], buf[i + 1]) == SP_NO_ECHO) {
-      return PG_HARDWARE_ERR;
+      return PG_ERR;
     }
 
     if (addr % page_num_words == 0 && addr != 0) {
       if (SPI_write_flash_page(addr_lsb, addr_msb) == SP_NO_ECHO) {
-        return PG_HARDWARE_ERR;
+        return PG_ERR;
       }
     }
     
@@ -70,7 +70,7 @@ PG_STATUS PROG_write_flash(uint8_t *buf, uint8_t buf_size,
   
   if (addr % page_num_words != 0) {
     if (SPI_write_flash_page(addr_lsb, addr_msb) == SP_NO_ECHO) {
-      return PG_HARDWARE_ERR;
+      return PG_ERR;
     }
   }
 
@@ -91,17 +91,18 @@ PG_STATUS PROG_read_flash(uint8_t *buf, uint8_t num_bytes, uint8_t addr_lsb, uin
     uint8_t addr_msb = (uint8_t) (addr >> 8);
 
     if (SPI_read_flash_addr_low(addr_lsb, addr_msb, &buf[i]) == SP_NO_ECHO) {
-      return PG_HARDWARE_ERR;
+      return PG_ERR;
     }
 
 
     if (SPI_read_flash_addr_high(addr_lsb, addr_msb, &buf[i + 1])) {
-      return PG_HARDWARE_ERR;
+      return PG_ERR;
     }
 
     addr++;
   }
-  
+
+  return PG_OK;
 }
 
 
@@ -109,12 +110,14 @@ PG_STATUS PROG_read_flash(uint8_t *buf, uint8_t num_bytes, uint8_t addr_lsb, uin
 PG_STATUS PROG_read_fuse_bits(uint8_t *buf) {
 
   if (SPI_read_fuse_low(&buf[0]) == SP_NO_ECHO) {
-    return PG_HARDWARE_ERR;
+    return PG_ERR;
   }
 
   if (SPI_read_fuse_high(&buf[1]) == SP_NO_ECHO) {
-    return PG_HARDWARE_ERR;
+    return PG_ERR;
   }
+
+  return PG_OK;
 }
 
 
@@ -124,8 +127,17 @@ PG_STATUS PROG_read_fuse_bits(uint8_t *buf) {
 PG_STATUS PROG_clock_set_crystal() {
 
   if (SPI_write_fuse_low(0xF7) == SP_NO_ECHO) {
-    return PG_HARDWARE_ERR;
+    return PG_ERR;
   }
 
   return PG_OK;
+}
+
+
+PG_STATUS PROG_erase_chip() {
+  if (SPI_chip_erase() == SP_OK) {
+    return PG_OK;
+  }
+
+  return PG_ERR;
 }

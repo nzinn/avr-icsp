@@ -1,11 +1,9 @@
+#include "prog_commands.h"
 #include "spi_base.h"
 #include "spi_instructions.h"
-#include "prog_commands.h"
 #include "usart.h"
 
 #include "packet.h"
-
-
 
 #define PAGE_NUM_WORDS 64
 
@@ -20,14 +18,11 @@
 #define PACKET_ADDR_MSB 2
 #define PACKET_DATA_POS 4
 
-
 /* For a baudrate of 9600 */
 #define USART_UBRR_VAL 103
 
-
 /* Which pin to use for reset */
 #define RESET 2
-
 
 enum PACKET_INSTRUCTION_TYPE {
   PROG_ENABLE,
@@ -39,7 +34,6 @@ enum PACKET_INSTRUCTION_TYPE {
   WRITE_FUSE,
   READ_FUSE
 };
-
 
 typedef void (*state_func_t)();
 
@@ -80,7 +74,6 @@ int main() {
   }
 }
 
-
 /* Initialize usart and SPI and await for packets */
 void state_init() {
   SPI_master_init();
@@ -92,25 +85,26 @@ void state_init() {
 /* Waits for a packet and decodes its instruction*/
 void state_recieve_packet() {
 
-  if (PACK_rec_packet(packet_buffer, PACKET_SIZE)) {
+  if (PACK_rec_packet(packet_buffer, PACKET_SIZE) == PK_OK) {
 
-  /* decode packet instruction */
-  switch (packet_buffer[PACKET_INST_POS]) {
-  case PROG_ENABLE:
-    current_state = state_enable_programming;
-    break;
-  case CHIP_ERASE:
-    current_state = state_erase_chip;
-    break;
-  case WRITE_FLASH:
-    current_state = state_write_flash;
-    break;
-  case READ_FLASH:
-    current_state = state_read_flash;
-    break;
-  }
-
-  }
+    /* decode packet instruction */
+    switch (packet_buffer[PACKET_INST_POS]) {
+    case PROG_ENABLE:
+      current_state = state_enable_programming;
+      break;
+    case CHIP_ERASE:
+      current_state = state_erase_chip;
+      break;
+    case WRITE_FLASH:
+      current_state = state_write_flash;
+      break;
+    case READ_FLASH:
+      current_state = state_read_flash;
+      break;
+      packet_buffer[PACKET_STATUS_POS] = PK_ERR;
+      current_state = state_send_packet;
+    }
+  } 
 }
 
 /* Sends the contenst of the packet buffer */
@@ -122,35 +116,29 @@ void state_send_packet() {
 
 void state_enable_programming() {
 
-
-  if (PROG_enable_programming(RESET, 3)) {
-    packet_buffer[PACKET_STATUS_POS] = OK;
-  } else {
-    packet_buffer[PACKET_STATUS_POS] = EXEC_ERR;
-  }
+  packet_buffer[PACKET_STATUS_POS] = PROG_enable_programming(RESET, 3);
 
   current_state = state_send_packet;
 }
 
 void state_erase_chip() {
-  SPI_chip_erase();
-  packet_buffer[PACKET_STATUS_POS] = OK;
+  packet_buffer[PACKET_STATUS_POS] = PROG_erase_chip();
   current_state = state_send_packet;
 }
 
 void state_write_flash() {
 
-  PROG_write_flash(packet_buffer + HEADER_SIZE, PACKET_SIZE, PAGE_NUM_WORDS, packet_buffer[PACKET_ADDR_LSB], packet_buffer[PACKET_ADDR_MSB]);
-
-  packet_buffer[PACKET_STATUS_POS] = OK;
+  packet_buffer[PACKET_STATUS_POS] = PROG_write_flash(
+      packet_buffer + HEADER_SIZE, PACKET_SIZE, PAGE_NUM_WORDS,
+      packet_buffer[PACKET_ADDR_LSB], packet_buffer[PACKET_ADDR_MSB]);
   current_state = state_send_packet;
 }
 
 void state_read_flash() {
 
-  PROG_read_flash(packet_buffer + HEADER_SIZE, PACKET_SIZE, packet_buffer[PACKET_ADDR_LSB], packet_buffer[PACKET_ADDR_MSB]);
-
-  packet_buffer[PACKET_STATUS_POS] = OK;
+  packet_buffer[PACKET_STATUS_POS] = PROG_read_flash(
+      packet_buffer + HEADER_SIZE, PACKET_SIZE, packet_buffer[PACKET_ADDR_LSB],
+      packet_buffer[PACKET_ADDR_MSB]);
+  ;
   current_state = state_send_packet;
-  
 }

@@ -147,6 +147,7 @@ def main():
 
         packet = bytearray(PACKET_SIZE)
 
+        print('Enabling programming...')
         packet[0] = PROG_ENABLE
         rec = send_rec_packet(ser, packet)
 

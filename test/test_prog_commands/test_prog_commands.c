@@ -119,7 +119,7 @@ void test_enable_prog_fail(void) {
  
   SPI_prog_enable_fake.return_val = SP_NO_ECHO;
 
-  TEST_ASSERT_EQUAL(PG_HARDWARE_ERR, PROG_enable_programming(2, 3));
+  TEST_ASSERT_EQUAL(PG_ERR, PROG_enable_programming(2, 3));
   TEST_ASSERT_EQUAL_INT(3, SPI_prog_enable_fake.call_count);
 }
 
@@ -213,11 +213,13 @@ void test_read_flash_overflow() {
 
 
   uint8_t start_addr = 255;
-  PROG_read_flash(check_buffer, BUFFER_SIZE, start_addr, 0);
+
+  PG_STATUS status = PROG_read_flash(check_buffer, BUFFER_SIZE, start_addr, 0);
 
   
   TEST_ASSERT_EQUAL_UINT8_ARRAY(check_buffer, test_buffer, BUFFER_SIZE);
   TEST_ASSERT(verify_read_addresses(start_addr, 0));
+  TEST_ASSERT_EQUAL(PG_OK, status);
 }
 
 
@@ -225,8 +227,8 @@ void test_write_flash_base() {
 
 
   uint8_t page_size = 64;
-  
-  PROG_write_flash(test_buffer, BUFFER_SIZE, page_size, 0, 0);
+
+  PG_STATUS status = PROG_write_flash(test_buffer, BUFFER_SIZE, page_size, 0, 0);
 
   uint8_t addr_msb_buf[BUFFER_SIZE / 2];
 
@@ -235,6 +237,8 @@ void test_write_flash_base() {
     addr_msb_buf[i] = addr_msb++;
   }
 
+
+  TEST_ASSERT_EQUAL(PG_OK, status);
   TEST_ASSERT_EQUAL_UINT8_ARRAY(test_buffer_low, SPI_write_flash_addr_fake.arg1_history, BUFFER_SIZE / 2);
   TEST_ASSERT_EQUAL_UINT8_ARRAY(test_buffer_high,
                                 SPI_write_flash_addr_fake.arg2_history,
@@ -244,6 +248,7 @@ void test_write_flash_base() {
       addr_msb_buf, SPI_write_flash_addr_fake.arg0_history, BUFFER_SIZE / 2);
 
   TEST_ASSERT_EQUAL(ceil((float) BUFFER_SIZE / 2 / page_size), SPI_write_flash_page_fake.call_count);
+  
 }
 
 
@@ -252,7 +257,7 @@ void test_write_flash_overflow() {
 
   uint8_t page_size = 64;
   uint8_t start_addr = 255;
-  PROG_write_flash(test_buffer, BUFFER_SIZE, page_size, start_addr, 0);
+  PG_STATUS status = PROG_write_flash(test_buffer, BUFFER_SIZE, page_size, start_addr, 0);
 
   uint8_t addr_msb_buf[BUFFER_SIZE / 2];
 
@@ -262,6 +267,7 @@ void test_write_flash_overflow() {
     addr_msb_buf[i] = addr_msb++;
   }
 
+  TEST_ASSERT_EQUAL(PG_OK, status);
   TEST_ASSERT_EQUAL_UINT8_ARRAY(test_buffer_low, SPI_write_flash_addr_fake.arg1_history, BUFFER_SIZE / 2);
   TEST_ASSERT_EQUAL_UINT8_ARRAY(test_buffer_high,
                                 SPI_write_flash_addr_fake.arg2_history,
@@ -313,7 +319,6 @@ void test_set_clock_crystal(void) {
   PG_STATUS ret = PROG_clock_set_crystal();
   TEST_ASSERT_EQUAL_UINT8(SPI_write_fuse_low_fake.arg0_val, 0xF7);
   TEST_ASSERT_EQUAL(ret, PG_OK);
-  
 }
 
 

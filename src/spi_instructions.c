@@ -10,6 +10,9 @@
 
 
 
+#define ERASE_WAIT_DELAY 9
+#define FLASH_WRITE_DELAY 5
+
 
 /* Send a 4-byte instruction, putting the response in rec and returning if there
  * was a successful echo*/
@@ -37,20 +40,22 @@ static SP_STATUS SPI_send_rec(const uint8_t instruction[], uint8_t *response) {
 
 
 /* Wait until the chip is ready for another instruction */
-static SP_STATUS SPI_chip_wait_ready() {
+static SP_STATUS SPI_chip_wait_ready(uint8_t max_ms) {
 
   const uint8_t inst[] = {0xF0, 0x00, 0x00, 0x00};
 
   uint8_t pending;
-
+  uint8_t ms_waited = 0;
   do {
     _delay_ms(1);
+    ms_waited++;
+    
     if (SPI_send_rec(inst, &pending) == SP_NO_ECHO) {
       return SP_NO_ECHO;
     }
 
     pending &= 1;
-  } while (pending);
+  } while (pending && ms_waited < max_ms);
 
   return SP_OK;
 }
@@ -77,28 +82,20 @@ SP_STATUS SPI_chip_erase() {
     return SP_NO_ECHO;
   }
 
-  return SPI_chip_wait_ready();
+  return SPI_chip_wait_ready(ERASE_WAIT_DELAY);
 }
 
 
 /* Loads data into address[5:0] of page buffer*/
 SP_STATUS SPI_write_flash_addr(uint8_t addr_lsb, uint8_t data_lsb, uint8_t data_msb)  {
 
-  SP_STATUS high_inst_status;
-  SP_STATUS low_inst_status;
 
   const uint8_t low_inst[] = {0x40, 0x00, addr_lsb, data_lsb};
   const uint8_t high_inst[] = {0x48, 0x00, addr_lsb, data_msb};
-  /* Load low byte */
-  SPI_send_rec(low_inst, 0);
-  /* Load high byte */
-  SPI_send_rec(high_inst, 0);
 
-  if (high_inst_status == SP_NO_ECHO || low_inst_status == SP_NO_ECHO) {
-    return SP_NO_ECHO;
-  }
 
-  return SP_OK;
+  /* Load the high and low address, ORing the status. (1 is failure) */
+  return SPI_send_rec(low_inst, 0) | SPI_send_rec(high_inst, 0);
 }
 
 /* Reads the high byte of the given flash address */
@@ -127,7 +124,7 @@ SP_STATUS SPI_write_flash_page(uint8_t addr_lsb, uint8_t addr_msb) {
     return SP_NO_ECHO;
   }
 
-  return SPI_chip_wait_ready();
+  return SPI_chip_wait_ready(FLASH_WRITE_DELAY);
 }
 
 /* Read the fuse low bits */
@@ -144,4 +141,17 @@ SP_STATUS SPI_read_fuse_high(uint8_t *high_bits) {
   return SPI_send_rec(inst, high_bits);
 }
 
+
+SP_STATUS SPI_write_fuse_high(uint8_t high_bits) {
+  const uint8_t inst[] = {0xAC, 0xA8, 0x00, high_bits};
+
+  return SPI_send_rec(inst, 0);
+}
+
+
+SP_STATUS SPI_write_fuse_low(uint8_t low_bits) {
+  const uint8_t inst[] = {0xAC, 0xA0, 0x00, low_bits};
+
+  return SPI_send_rec(inst, 0);
+}
 
