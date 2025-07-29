@@ -101,10 +101,15 @@ void state_recieve_packet() {
     case READ_FLASH:
       current_state = state_read_flash;
       break;
+<<<<<<< Updated upstream
       packet_buffer[PACKET_STATUS_POS] = PK_ERR;
       current_state = state_send_packet;
     }
   } 
+=======
+    }
+  }
+>>>>>>> Stashed changes
 }
 
 /* Sends the contenst of the packet buffer */
