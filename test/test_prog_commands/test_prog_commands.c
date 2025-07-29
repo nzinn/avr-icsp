@@ -230,11 +230,11 @@ void test_write_flash_base() {
 
   PG_STATUS status = PROG_write_flash(test_buffer, BUFFER_SIZE, page_size, 0, 0);
 
-  uint8_t addr_msb_buf[BUFFER_SIZE / 2];
+  uint8_t addr_lsb_buf[BUFFER_SIZE / 2];
 
-  uint8_t addr_msb = 0;
+  uint8_t addr_lsb = 0;
   for (int i = 0; i < BUFFER_SIZE / 2; i++) {
-    addr_msb_buf[i] = addr_msb++;
+    addr_lsb_buf[i] = addr_lsb++;
   }
 
 
@@ -244,8 +244,9 @@ void test_write_flash_base() {
                                 SPI_write_flash_addr_fake.arg2_history,
                                 BUFFER_SIZE / 2);
 
+  /* Check the address passedi in to SPI_write_flash is correct */
   TEST_ASSERT_EQUAL_UINT8_ARRAY(
-      addr_msb_buf, SPI_write_flash_addr_fake.arg0_history, BUFFER_SIZE / 2);
+      addr_lsb_buf, SPI_write_flash_addr_fake.arg0_history, BUFFER_SIZE / 2);
 
   TEST_ASSERT_EQUAL(ceil((float) BUFFER_SIZE / 2 / page_size), SPI_write_flash_page_fake.call_count);
   
@@ -256,15 +257,18 @@ void test_write_flash_overflow() {
 
 
   uint8_t page_size = 64;
-  uint8_t start_addr = 255;
-  PG_STATUS status = PROG_write_flash(test_buffer, BUFFER_SIZE, page_size, start_addr, 0);
+  uint8_t start_addr_lsb = 0xFF;
+  uint8_t start_addr_msb = 0x0F;
 
-  uint8_t addr_msb_buf[BUFFER_SIZE / 2];
+  
+  PG_STATUS status = PROG_write_flash(test_buffer, BUFFER_SIZE, page_size, start_addr_lsb, start_addr_msb);
 
-  uint8_t addr_msb = start_addr;
+  uint8_t addr_lsb_buf[BUFFER_SIZE / 2];
+
+  uint8_t addr_lsb = start_addr_lsb;
   
   for (int i = 0; i < BUFFER_SIZE / 2; i++) {
-    addr_msb_buf[i] = addr_msb++;
+    addr_lsb_buf[i] = addr_lsb++;
   }
 
   TEST_ASSERT_EQUAL(PG_OK, status);
@@ -274,7 +278,22 @@ void test_write_flash_overflow() {
                                 BUFFER_SIZE / 2);
 
   TEST_ASSERT_EQUAL_UINT8_ARRAY(
-      addr_msb_buf, SPI_write_flash_addr_fake.arg0_history, BUFFER_SIZE / 2);
+      addr_lsb_buf, SPI_write_flash_addr_fake.arg0_history, BUFFER_SIZE / 2);
+
+
+  TEST_ASSERT_EQUAL(SPI_write_flash_page_fake.arg0_history[0] & 0x3F,
+              page_size - 1);
+
+  uint16_t start_addr =
+      ((uint16_t)start_addr_msb) << 8 | (uint16_t)start_addr_lsb;
+
+  uint8_t end_addr_lsb = SPI_write_flash_page_fake.arg0_val;
+  uint8_t end_addr_msb = SPI_write_flash_page_fake.arg1_val;
+
+  uint16_t end_addr = ((uint16_t)end_addr_msb) << 8 | (uint16_t)end_addr_lsb;
+  
+  TEST_ASSERT_EQUAL(start_addr + page_size - 1, end_addr);
+  
 }
 
 

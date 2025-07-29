@@ -7,8 +7,7 @@
 
 
 
-/* Tries to enable programming for a maximum of num_tries, returns false on
- * error */
+/* Tries to enable programming for a maximum of num_tries*/
 PG_STATUS PROG_enable_programming(uint8_t reset_pin, uint8_t num_tries) {
 
   set_pin_dir(reset_pin, OUTPUT);
@@ -17,6 +16,7 @@ PG_STATUS PROG_enable_programming(uint8_t reset_pin, uint8_t num_tries) {
 
   int tries = 0;
   while (SPI_prog_enable() == SP_NO_ECHO && tries < num_tries - 1) {
+    /* Pulse reset line */
     dig_write(reset_pin, HIGH);
     _delay_us(8);
     dig_write(reset_pin, LOW);
@@ -43,12 +43,13 @@ PG_STATUS PROG_write_flash(uint8_t *buf, uint8_t buf_size,
 
 
   uint16_t addr = ((uint16_t) addr_msb) << 8 | addr_lsb;
-
+  uint8_t wrote_flash;
+  
   for (int i = 0; i + 1 < buf_size; i += 2) {
+    wrote_flash = 0;
 
-
-    uint8_t addr_lsb = (uint8_t)addr;
-    uint8_t addr_msb = (uint8_t) (addr >> 8);
+    addr_lsb = (uint8_t)addr;
+    addr_msb = (uint8_t) (addr >> 8);
 
 
 
@@ -56,19 +57,20 @@ PG_STATUS PROG_write_flash(uint8_t *buf, uint8_t buf_size,
       return PG_ERR;
     }
 
-    if (addr % page_num_words == 0 && addr != 0) {
+    /* Write the page if we're on the last address*/
+    if ((addr_lsb & 0x3F) == page_num_words - 1) {
       if (SPI_write_flash_page(addr_lsb, addr_msb) == SP_NO_ECHO) {
         return PG_ERR;
       }
+
+      wrote_flash = 1;
     }
     
     addr++;
   }
 
-  /* If we didn't write the page on the last word, write it now */
-  addr--;
   
-  if (addr % page_num_words != 0) {
+  if (!wrote_flash) {
     if (SPI_write_flash_page(addr_lsb, addr_msb) == SP_NO_ECHO) {
       return PG_ERR;
     }
