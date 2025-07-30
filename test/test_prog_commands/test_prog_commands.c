@@ -212,13 +212,14 @@ void test_read_flash_overflow() {
   uint8_t check_buffer[BUFFER_SIZE];
 
 
-  uint8_t start_addr = 255;
+  uint8_t start_addr_lsb = 0xFF;
+  uint8_t start_addr_msb = 0x01;
 
-  PG_STATUS status = PROG_read_flash(check_buffer, BUFFER_SIZE, start_addr, 0);
+  PG_STATUS status = PROG_read_flash(check_buffer, BUFFER_SIZE, start_addr_lsb, start_addr_msb);
 
   
   TEST_ASSERT_EQUAL_UINT8_ARRAY(check_buffer, test_buffer, BUFFER_SIZE);
-  TEST_ASSERT(verify_read_addresses(start_addr, 0));
+  TEST_ASSERT(verify_read_addresses(start_addr_lsb, start_addr_msb));
   TEST_ASSERT_EQUAL(PG_OK, status);
 }
 

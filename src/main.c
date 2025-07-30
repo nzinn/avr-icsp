@@ -101,15 +101,8 @@ void state_recieve_packet() {
     case READ_FLASH:
       current_state = state_read_flash;
       break;
-<<<<<<< Updated upstream
-      packet_buffer[PACKET_STATUS_POS] = PK_ERR;
-      current_state = state_send_packet;
-    }
-  } 
-=======
     }
   }
->>>>>>> Stashed changes
 }
 
 /* Sends the contenst of the packet buffer */
@@ -134,7 +127,7 @@ void state_erase_chip() {
 void state_write_flash() {
 
   packet_buffer[PACKET_STATUS_POS] = PROG_write_flash(
-      packet_buffer + HEADER_SIZE, PACKET_SIZE, PAGE_NUM_WORDS,
+      &packet_buffer[HEADER_SIZE], PACKET_SIZE - HEADER_SIZE, PAGE_NUM_WORDS,
       packet_buffer[PACKET_ADDR_LSB], packet_buffer[PACKET_ADDR_MSB]);
   current_state = state_send_packet;
 }
@@ -142,7 +135,7 @@ void state_write_flash() {
 void state_read_flash() {
 
   packet_buffer[PACKET_STATUS_POS] = PROG_read_flash(
-      packet_buffer + HEADER_SIZE, PACKET_SIZE, packet_buffer[PACKET_ADDR_LSB],
+      &packet_buffer[HEADER_SIZE], PACKET_SIZE - HEADER_SIZE, packet_buffer[PACKET_ADDR_LSB],
       packet_buffer[PACKET_ADDR_MSB]);
   ;
   current_state = state_send_packet;

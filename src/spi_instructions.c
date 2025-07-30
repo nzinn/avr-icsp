@@ -45,11 +45,7 @@ static SP_STATUS SPI_chip_wait_ready(uint8_t max_ms) {
   const uint8_t inst[] = {0xF0, 0x00, 0x00, 0x00};
 
   uint8_t pending;
-<<<<<<< Updated upstream
   uint8_t ms_waited = 0;
-=======
-  uint8_t ms_waited;
->>>>>>> Stashed changes
   do {
     _delay_ms(1);
     ms_waited++;
