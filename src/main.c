@@ -32,7 +32,8 @@ enum PACKET_INSTRUCTION_TYPE {
   WRITE_EEPROM,
   READ_EEPROM,
   WRITE_FUSE,
-  READ_FUSE
+  READ_FUSE,
+  SET_CLOCK
 };
 
 typedef void (*state_func_t)();
@@ -64,6 +65,9 @@ void state_erase_chip();
 /* Enables the programming of the MCU */
 void state_enable_programming();
 
+/* Sets external crystal as system clock */
+void state_set_clock();
+
 state_func_t current_state = state_init;
 
 unsigned char packet_buffer[PACKET_SIZE];
@@ -86,7 +90,6 @@ void state_init() {
 void state_recieve_packet() {
 
   if (PACK_rec_packet(packet_buffer, PACKET_SIZE) == PK_OK) {
-
     /* decode packet instruction */
     switch (packet_buffer[PACKET_INST_POS]) {
     case PROG_ENABLE:
@@ -100,6 +103,9 @@ void state_recieve_packet() {
       break;
     case READ_FLASH:
       current_state = state_read_flash;
+      break;
+    case SET_CLOCK:
+      current_state = state_set_clock;
       break;
     }
   }
@@ -138,5 +144,10 @@ void state_read_flash() {
       &packet_buffer[HEADER_SIZE], PACKET_SIZE - HEADER_SIZE, packet_buffer[PACKET_ADDR_LSB],
       packet_buffer[PACKET_ADDR_MSB]);
   ;
+  current_state = state_send_packet;
+}
+
+void state_set_clock() {
+  packet_buffer[PACKET_STATUS_POS] = PROG_clock_set_crystal();
   current_state = state_send_packet;
 }

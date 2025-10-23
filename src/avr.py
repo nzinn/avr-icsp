@@ -95,8 +95,6 @@ def write_file_to_flash(ser, filename):
                 break
 
         if packet_num_bytes > 0:
-            print(packet.hex(' '))
-            print()
             send_rec_packet(ser, packet)
         else:
             break
@@ -118,8 +116,6 @@ def verify_program(ser, filename):
         packet.extend(int(i * PAGE_NUM_BYTES / 2).to_bytes(2, 'little'))
         packet.extend(bytes(1 + PAGE_NUM_BYTES))
         rec = send_rec_packet(ser, packet)
-        print(rec.hex(' '))
-        print()
         if rec:
             flash_contents.extend(rec[HEADER_LENGTH:])
         else:
@@ -153,12 +149,10 @@ def main():
 
         if rec[PACKET_STATUS_POS] != OK:
             print("Couldn't enable programming!")
-            print(rec.hex(' '))
             return
 
-
         print("Erasing chip...")
-        
+
         packet[0] = CHIP_ERASE
         send_rec_packet(ser, packet)
         print('Chip erased.')
@@ -170,6 +164,6 @@ def main():
         verify_program(ser, sys.argv[1])
         print('finished')
 
-        
+
 if __name__ == '__main__':
     main()
