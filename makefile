@@ -26,7 +26,8 @@ build:
 
 install:
 	avrdude -c arduino -p m328p -P /dev/ttyUSB0 -e -U flash:w:$(NAME).elf
-
+hex:
+	avr-objcopy -O ihex $(NAME).elf $(NAME).hex
 
 
 
