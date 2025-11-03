@@ -71,7 +71,6 @@ def write_file_to_flash(ser, filename):
 
     programmed_bytes = 0
     
-    print(f'File segments: {hex_file.segments()}')
     addr = 0
     while True:
         packet = bytearray()
@@ -137,7 +136,7 @@ def main():
         print("Improper command usage: use 'command hex_file port_file'")
         exit()
 
-    with serial.Serial(sys.argv[2]) as ser:
+    with serial.Serial(sys.argv[2], 4800) as ser:
         # Wait for bootloader to init
         time.sleep(3)
 

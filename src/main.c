@@ -19,7 +19,7 @@
 #define PACKET_DATA_POS 4
 
 /* For a baudrate of 9600 */
-#define USART_UBRR_VAL 103
+#define USART_UBRR_VAL 12
 
 /* Which pin to use for reset */
 #define RESET 2
