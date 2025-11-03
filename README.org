@@ -1,0 +1,7 @@
+*In-circuit programmer for ATmega microcontrollers
+
+**Features
+- DIP switch for changing between programmer and UART bridge
+- LED indicators mode and transmission
+- USB-C connection
+[[https://github.com/nzinn/avr-icsp/master/images/board.jpg?raw=true]]
